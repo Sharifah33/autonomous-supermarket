@@ -1,0 +1,17 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch-path=src src/index.js",
+    "start": "node src/index.js",
+    "seed": "node src/scripts/seed.js",
+    "new-run": "node src/scripts/newRun.js",
+    "verify": "node src/scripts/verify.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "sql.js": "^1.14.2"
+  }
+}

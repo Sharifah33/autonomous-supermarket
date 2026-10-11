@@ -1,0 +1,17 @@
+{
+  "name": "autonomous-supermarket",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CSE3CWA/CSE5006 Assignment 4 - Autonomous Supermarket simulation, Store Brain and commercial assurance",
+  "workspaces": ["server", "client"],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w client",
+    "start": "npm run build && npm run start -w server",
+    "seed": "npm run seed -w server",
+    "new-run": "npm run new-run -w server",
+    "verify": "npm run verify -w server"
+  },
+  "devDependencies": { "concurrently": "^9.1.2" },
+  "engines": { "node": ">=20" }
+}
