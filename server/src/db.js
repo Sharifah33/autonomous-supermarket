@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS run_products (
   popularity REAL NOT NULL,
   plan_daily_units REAL NOT NULL,
   PRIMARY KEY (run_id, product_id)
-);
+) WITHOUT ROWID;
 
 -- Single designated Submitted Run (set once, cannot be changed through the application)
 CREATE TABLE IF NOT EXISTS submitted_run (
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS sim_days (
   ramp_factor REAL NOT NULL,
   expected_customers REAL NOT NULL,
   PRIMARY KEY (run_id, day)
-);
+) WITHOUT ROWID;
 
 CREATE TABLE IF NOT EXISTS customers (
   run_id TEXT NOT NULL,
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS customers (
   intended_lines INTEGER NOT NULL,
   outcome TEXT NOT NULL,             -- PURCHASED | NO_PURCHASE_STOCKOUT
   PRIMARY KEY (run_id, customer_id)
-);
+) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS ix_customers_day ON customers(run_id, day);
 
 CREATE TABLE IF NOT EXISTS transactions (
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   units INTEGER NOT NULL,
   total REAL NOT NULL,
   PRIMARY KEY (run_id, txn_id)
-);
+) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS ix_txn_day ON transactions(run_id, day);
 
 CREATE TABLE IF NOT EXISTS transaction_lines (
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS transaction_lines (
   line_total REAL NOT NULL,
   substituted_for TEXT,
   PRIMARY KEY (run_id, txn_id, line_no)
-);
+) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS ix_lines_product ON transaction_lines(run_id, product_id);
 
 CREATE TABLE IF NOT EXISTS batches (
@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS batches (
   qty_received INTEGER NOT NULL,
   unit_cost REAL NOT NULL,
   PRIMARY KEY (run_id, batch_id)
-);
+) WITHOUT ROWID;
 
 CREATE TABLE IF NOT EXISTS inventory_movements (
   run_id TEXT NOT NULL,
@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
   ref_type TEXT,
   ref_id INTEGER,
   PRIMARY KEY (run_id, movement_id)
-);
+) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS ix_mov_day ON inventory_movements(run_id, day, product_id);
 CREATE INDEX IF NOT EXISTS ix_mov_batch ON inventory_movements(run_id, batch_id);
 
@@ -156,7 +156,7 @@ CREATE TABLE IF NOT EXISTS lost_sales (
   unit_price REAL NOT NULL,
   reason TEXT NOT NULL,              -- SOLD_OUT | PARTIAL
   PRIMARY KEY (run_id, lost_id)
-);
+) WITHOUT ROWID;
 
 CREATE TABLE IF NOT EXISTS replenishment_orders (
   run_id TEXT NOT NULL,
@@ -177,7 +177,7 @@ CREATE TABLE IF NOT EXISTS replenishment_orders (
   usable_stock INTEGER NOT NULL,
   target_stock REAL NOT NULL,
   PRIMARY KEY (run_id, order_id)
-);
+) WITHOUT ROWID;
 
 CREATE TABLE IF NOT EXISTS cash_ledger (
   run_id TEXT NOT NULL,
@@ -189,7 +189,7 @@ CREATE TABLE IF NOT EXISTS cash_ledger (
   balance_after REAL NOT NULL,
   ref_id INTEGER,
   PRIMARY KEY (run_id, entry_id)
-);
+) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS ix_cash_day ON cash_ledger(run_id, day);
 
 CREATE TABLE IF NOT EXISTS brain_events (
@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS brain_events (
   metrics_json TEXT,
   order_id INTEGER,
   PRIMARY KEY (run_id, event_id)
-);
+) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS ix_brain_day ON brain_events(run_id, day);
 CREATE INDEX IF NOT EXISTS ix_brain_type ON brain_events(run_id, event_type);
 
@@ -225,7 +225,7 @@ CREATE TABLE IF NOT EXISTS daily_stock (
   lost_units INTEGER NOT NULL,
   forecast_next REAL,
   PRIMARY KEY (run_id, day, product_id)
-);
+) WITHOUT ROWID;
 
 CREATE TABLE IF NOT EXISTS day_close (
   run_id TEXT NOT NULL,
@@ -241,18 +241,16 @@ CREATE TABLE IF NOT EXISTS day_close (
   closing_cash REAL NOT NULL,
   closing_inventory_value REAL NOT NULL,
   PRIMARY KEY (run_id, day)
-);
+) WITHOUT ROWID;
 `;
 
 const INDEXES = `
 CREATE INDEX IF NOT EXISTS ix_mov_ref ON inventory_movements(run_id, ref_type, ref_id);
-CREATE INDEX IF NOT EXISTS ix_mov_type ON inventory_movements(run_id, type, product_id);
 CREATE INDEX IF NOT EXISTS ix_orders_product ON replenishment_orders(run_id, product_id, day_placed);
 CREATE INDEX IF NOT EXISTS ix_orders_day ON replenishment_orders(run_id, day_placed);
 CREATE INDEX IF NOT EXISTS ix_batches_order ON batches(run_id, order_id);
 CREATE INDEX IF NOT EXISTS ix_lost_product ON lost_sales(run_id, product_id);
 CREATE INDEX IF NOT EXISTS ix_lost_day ON lost_sales(run_id, day);
-CREATE INDEX IF NOT EXISTS ix_lines_sub ON transaction_lines(run_id, substituted_for);
 CREATE INDEX IF NOT EXISTS ix_txn_customer ON transactions(run_id, customer_id);
 CREATE INDEX IF NOT EXISTS ix_brain_product ON brain_events(run_id, product_id, event_type);
 CREATE INDEX IF NOT EXISTS ix_stock_product ON daily_stock(run_id, product_id, day);
@@ -299,6 +297,8 @@ export function getDb() {
   instance.exec(SCHEMA);
   instance.exec(INDEXES);
   instance.exec(guardTriggers());
-  if (isNew) instance.save();
+  const hasStats = instance.prepare("SELECT 1 AS x FROM sqlite_master WHERE name = 'sqlite_stat1'").get();
+  if (!hasStats) instance.exec('ANALYZE');
+  if (isNew || !hasStats) instance.save();
   return instance;
 }

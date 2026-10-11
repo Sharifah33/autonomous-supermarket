@@ -35,8 +35,8 @@ function Body({ d, runId }) {
             This is a weekday, office-driven store. Weekdays averaged {num(wd?.avg_customers, 0)} customers against {num(we?.avg_customers, 0)} at weekends.
             Weekend shoppers bought bigger baskets ({num(we?.avg_basket_units, 2)} vs {num(wd?.avg_basket_units, 2)} units, {money(we?.avg_transaction_value, 2)} vs{' '}
             {money(wd?.avg_transaction_value, 2)}), so the weekend revenue gap is smaller than the traffic gap. {MISSION_LABEL[topMission.mission]} trips were{' '}
-            {pct((topMission.revenue / missionRev) * 100)} of revenue. {topCat.category} was the largest category ({pct(topCat.revenue_share_pct)} of sales) and{' '}
-            {gpCat.category} the largest source of gross profit.
+            {pct((topMission.revenue / missionRev) * 100)} of revenue. {topCat.category} was the largest category ({pct(topCat.revenue_share_pct)} of sales)
+            {gpCat.category === topCat.category ? ' and also the largest source of gross profit.' : ` and ${gpCat.category} the largest source of gross profit.`}
           </p>
           <p>
             The best day was <DayLink day={best.day}>Day {best.day}</DayLink> ({best.weekday}, {money(best.revenue)}), the weakest{' '}

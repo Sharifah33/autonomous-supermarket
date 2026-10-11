@@ -77,6 +77,9 @@ export function runSimulation(db, { seed, label = null } = {}) {
     simulate(runId, cfg, products, makeRng(runSeed), S);
     S.complete.run({ run_id: runId, completed_at: new Date().toISOString(), runtime_ms: Date.now() - t0 });
   })();
+  // Refresh SQLite's table statistics so report queries keep efficient plans as runs accumulate.
+  db.exec('ANALYZE');
+  db.save();
   return runId;
 }
 

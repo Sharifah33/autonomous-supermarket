@@ -11,24 +11,27 @@ import initSqlJs from 'sql.js';
 const require = createRequire(import.meta.url);
 const SQL = await initSqlJs({ locateFile: (f) => path.join(path.dirname(require.resolve('sql.js')), f) });
 
-// better-sqlite3 style params ({ r: 'RUN-0001' } for @r, or positional values) -> sql.js params
-function toParams(args) {
-  if (args.length === 0) return undefined;
-  const clean = (v) => (v === undefined ? null : typeof v === 'boolean' ? (v ? 1 : 0) : v);
-  if (args.length === 1 && args[0] !== null && typeof args[0] === 'object' && !Array.isArray(args[0])) {
-    const out = {};
-    for (const [k, v] of Object.entries(args[0])) out[`@${k}`] = clean(v);
-    return out;
-  }
-  return args.map(clean);
-}
-
+const clean = (v) => (v === undefined ? null : typeof v === 'boolean' ? (v ? 1 : 0) : v);
 class Statement {
   constructor(owner, sql) {
     this.owner = owner;
     this.sql = sql;
     this.gen = -1;
     this.stmt = null;
+    // Named parameters (@name) in order of first appearance = SQLite's parameter index order.
+    // Binding positionally avoids a per-row name lookup in the WebAssembly engine.
+    this.names = [...new Set([...sql.matchAll(/@([A-Za-z_][A-Za-z0-9_]*)/g)].map((m) => m[1]))];
+  }
+  // better-sqlite3 style arguments -> positional array for sql.js
+  _params(args) {
+    if (args.length === 0) return null;
+    const a0 = args[0];
+    if (args.length === 1 && a0 !== null && typeof a0 === 'object' && !Array.isArray(a0)) {
+      const out = new Array(this.names.length);
+      for (let i = 0; i < this.names.length; i++) out[i] = clean(a0[this.names[i]]);
+      return out;
+    }
+    return args.map(clean);
   }
   _stmt() {
     if (this.gen !== this.owner.gen) {
@@ -40,7 +43,7 @@ class Statement {
   all(...args) {
     const s = this._stmt();
     try {
-      const p = toParams(args);
+      const p = this._params(args);
       if (p) s.bind(p);
       const rows = [];
       while (s.step()) rows.push(s.getAsObject());
@@ -52,7 +55,7 @@ class Statement {
   get(...args) {
     const s = this._stmt();
     try {
-      const p = toParams(args);
+      const p = this._params(args);
       if (p) s.bind(p);
       return s.step() ? s.getAsObject() : undefined;
     } finally {
@@ -62,7 +65,7 @@ class Statement {
   run(...args) {
     const s = this._stmt();
     try {
-      const p = toParams(args);
+      const p = this._params(args);
       if (p) s.bind(p);
       s.step();
     } finally {
@@ -81,6 +84,11 @@ export default class Database {
     this.gen = 0; // bumped whenever sql.js invalidates prepared statements (on export)
     this.depth = 0;
     this.pragmas = [];
+    // The file on disk is only written by save() (atomic temp-file + rename), so SQLite's own
+    // rollback journal can live in memory: ROLLBACK still works, but no journal I/O per page.
+    this.pragma('journal_mode = MEMORY');
+    this.pragma('synchronous = OFF');
+    this.pragma('temp_store = MEMORY');
   }
   pragma(p) {
     this.pragmas.push(p);

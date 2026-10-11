@@ -43,7 +43,7 @@ Optional: `PORT` (default 4000) and `DB_PATH` (default `server/data/supermarket.
 | Daily Reports (Days 1-60) | **Daily Reports**: day selector, previous/next, and a 60-day strip |
 | Commercial Assurance | **Commercial Assurance** (full reconciliation tables) |
 | Traceability | Every day, product, event and evidence item links to the Daily Report, **Product trace**, **Store Brain log** or an individual transaction (lines, batches drawn, cash entry) |
-| Create a new run | **Simulation runs** > Start new 60-day run (about 5-10 s) |
+| Create a new run | **Simulation runs** > Start new 60-day run (about 3-5 s) |
 
 ## 3. Architecture and data flow
 
@@ -54,6 +54,7 @@ server/src/sim/engine.js        60-day loop: deliveries -> expiry -> customers &
 server/src/sim/brain.js         rule-based Store Brain (forecast, low stock, sold out, expiry, slow movers, cash)
 server/src/db.js                SQLite schema + append-only guard triggers
 server/src/sqlite.js            small synchronous wrapper over sql.js; writes the .db file atomically after each commit
+                                (history tables are WITHOUT ROWID and statistics are refreshed with ANALYZE after each run)
 server/src/reports/*.js         reports, findings, daily views and assurance, all computed by SQL from history
 server/src/index.js             Express API (read-only except POST /api/runs = start a new run)
 client/src                      React app (hash routes, e.g. #/RUN-0001/day/12)
