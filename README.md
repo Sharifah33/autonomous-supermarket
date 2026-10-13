@@ -101,19 +101,35 @@ Submitted Run headline: 29,064 customers, A$369,343 revenue, 43.8% gross margin,
 
 ## 5. AI collaboration
 
-> **To complete by the student.** The brief requires your own account of how you used AI and where you reviewed, changed or rejected its output. Replace this section with what you actually did, and keep only examples you have checked yourself.
+**Tools.** I built this project together with Claude (Anthropic), used as a coding and analysis assistant in a conversational session.
 
-**Tools.** Claude (Anthropic) was used to scaffold the project: catalogue drafting, the simulation engine, the Store Brain rules, SQL reports, the assurance checks, the React UI and this README.
+**How we worked together.** I set the direction from the assignment brief and made the decisions; Claude drafted and implemented. Claude and I worked on:
+- drafting the product catalogue and the customer/demand model (shopping missions, traffic, weekday/weekend patterns);
+- writing the simulation engine, the Store Brain rules and the SQLite schema with append-only triggers;
+- writing the SQL for the reports, findings and Commercial Assurance checks;
+- building the React interface and drafting this README.
 
-**Issues found and corrected during development.** These are examples you can verify in the code and data before you cite them:
+I ran and tested every version on my own Windows laptop and checked the results in the browser. When something failed or looked wrong, I reported it, and we corrected it together.
 
-- **Cost calibration.** The first catalogue produced a 53% overall gross margin, which is implausible for a supermarket. Unit costs were reset by category, giving 43.8% overall: dairy and pantry around 32-35%, ready-to-eat around 47%.
-- **Category weights.** The first category weights implied about 5 umbrellas and 15 toilet-paper packs sold per day in a small CBD store. Household and pantry weights were reduced and popularity was rebalanced.
-- **Opening allocation.** The first opening-inventory rule used only about $9.5k of the $40k budget, which caused needless early stockouts. The non-perishable cover was raised to 28 days with a one-case minimum.
-- **False assurance failure.** Products that were never re-ordered produced a NULL in the inventory reconciliation, so it reported a FAIL. The query was fixed with `COALESCE`; the data was correct all along.
-- **Findings errors.** A Finding 2 query joined daily rows to the plan and inflated planned units 46-fold, showing category velocities of 0.02x. It was rewritten and checked by hand. One evidence item (sell-outs in the first week vs the last week) contradicted its own diagnosis and was replaced.
+**Examples where I reviewed, questioned or changed AI-generated work**
 
-**What I remained responsible for.** [Your own statement: which assumptions you reviewed or changed, how you checked the figures, what you would defend in the video.]
+- **Installation failure and the database library.** Claude's first version used `better-sqlite3`. When I ran `npm install` on my laptop, it failed because the package needed C++ build tools. Claude proposed switching to `sql.js`. Before accepting, I questioned whether that still met the brief's SQLite requirement. I confirmed that `sql.js` is the SQLite engine compiled to WebAssembly and that `supermarket.db` is still a standard SQLite file. After the change, the clean install worked, which also means the marker should not hit the same error.
+- **Run time against the brief.** On my laptop, a new 60-day run took 9.3 seconds. I checked this against the brief, which says a run "must finish in a few seconds", and asked whether a fix was needed. I decided to have it optimised: we changed how rows are written to the database, without changing the model. I re-tested: runs now take about 4.6 seconds on my laptop, and the results of RUN-0001 are identical, with all 23 assurance checks still passing.
+- **Checking that the Submitted Run is typical.** I ran three extra verification runs with random seeds and compared them with RUN-0001. Revenue stayed within about 1.5% across all of them, so I kept RUN-0001 as the Submitted Run rather than choosing a "lucky" one.
+- **Corrections found while checking the model during development.** Claude checked its output during the build and corrected several issues, which I then reviewed in the code and the report:
+  - The first unit costs gave an implausible 53% gross margin. Costs were reset by category, giving 43.8% overall.
+  - Early category weights implied about 5 umbrellas a day in a small CBD store. These were rebalanced.
+  - The first opening-stock rule used only about $9.5k of the $40k budget. It was raised to 28 days of cover.
+  - A NULL value caused a false FAIL in the inventory reconciliation. The query was fixed, and the data itself was correct.
+  - A query error showed category sales at 0.02× plan. It was rewritten and checked.
+
+**What I remained responsible for.** I am responsible for the submitted system and every claim in it:
+- the choice of Submitted Run;
+- the model's assumptions, which I reviewed on the Model Declaration page;
+- the three findings and recommendations in Part 3, which I reviewed and accept as my own;
+- confirming that the app installs and runs from this README, and that the assurance checks pass.
+
+I understand how the Store Brain makes its decisions and can trace any reported figure back to the stored records, as shown in the video. Some product prices and demand weights are modelling assumptions rather than real data; this is listed under Known limitations.
 
 ## 6. Known limitations
 
